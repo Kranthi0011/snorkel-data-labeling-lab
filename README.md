@@ -85,6 +85,7 @@ This submission introduces significant modifications across both tutorials:
 | 4 | **Additional Models** | Logistic Regression only | Logistic Regression + Random Forest comparison across both tutorials |
 | 5 | **Visualizations** | Minimal | EDA distributions, LF coverage/accuracy charts, augmentation effects, 4-model comparison plots |
 | 6 | **End Model** | LSTM (Tutorial 02) | Logistic Regression + Random Forest with TF-IDF features |
+| 7 | **Slicing Functions** | 5 YouTube-specific SFs | 9 SMS-specific SFs including sentiment analysis, caps detection, punctuation patterns |
 
 ---
 
@@ -230,6 +231,55 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 
 ---
 
+
+## Tutorial 03: Data Slicing
+
+### Overview
+
+This tutorial demonstrates how to use Snorkel's slicing functions to identify critical data subsets, monitor per-slice model performance, and compare models across slices. In real-world applications, overall accuracy can mask poor performance on important subsets — slicing helps surface these failure modes.
+
+### Methodology
+
+**Step 1-2 — Baseline Models**: We trained Logistic Regression and Random Forest on the full labeled SMS dataset using TF-IDF features.
+
+**Step 3 — Slicing Function Design**: We defined 9 slicing functions to identify critical data subsets:
+
+| SF | Description | Category |
+|----|------------|----------|
+| `short_message` | Messages with fewer than 5 words | Message structure |
+| `long_message` | Messages with more than 30 words | Message structure (YOUR MODIFICATION) |
+| `contains_url` | Messages with HTTP/WWW links | Content pattern |
+| `contains_phone_number` | Messages with 5+ digit numbers | Content pattern |
+| `contains_currency` | Messages with $, pound, cash, free | Content pattern |
+| `positive_sentiment` | TextBlob polarity > 0.3 | Sentiment-based (YOUR MODIFICATION) |
+| `negative_sentiment` | TextBlob polarity < -0.1 | Sentiment-based (YOUR MODIFICATION) |
+| `all_caps` | Over 50% uppercase characters | Style-based (YOUR MODIFICATION) |
+| `heavy_punctuation` | 4+ punctuation marks (!, ?, .) | Style-based (YOUR MODIFICATION) |
+
+**Step 4-5 — Slice Application and Monitoring**: We applied all SFs to the test set and measured per-slice accuracy, weighted F1, and spam-specific F1.
+
+**Step 6-7 — Worst Slice Analysis**: We identified the weakest slices and examined misclassified examples to understand failure modes.
+
+**Step 8-9 — Model Comparison Per Slice**: We compared LR vs RF performance across all slices to determine which model handles specific subsets better.
+
+### Tutorial 03 Results
+
+| Slice | Size | LR F1 | RF F1 | Better Model |
+|-------|------|-------|-------|-------------|
+| short_message | 71 | 0.958 | 0.958 | Tie |
+| long_message | 90 | 0.949 | 0.963 | RF |
+| contains_url | 19 | 1.000 | 1.000 | Tie |
+| contains_phone_number | 114 | 0.927 | 0.927 | Tie |
+| contains_currency | 74 | 0.909 | 0.909 | Tie |
+| positive_sentiment | 274 | 0.962 | 0.962 | Tie |
+| negative_sentiment | 128 | 0.966 | 0.984 | RF |
+| all_caps | 27 | 0.957 | 0.890 | LR |
+| heavy_punctuation | 249 | 0.975 | 0.962 | LR |
+| **OVERALL** | **1115** | **0.974** | **0.973** | **LR** |
+
+**Key finding**: The `contains_currency` slice had the worst performance (F1=0.909), with 7 misclassified spam messages that used informal language patterns not captured by TF-IDF features. Random Forest outperformed LR on long messages and negative sentiment slices, while LR was better on all-caps and heavy punctuation slices.
+
+---
 ## Results Summary
 
 ### Overall Best Results Across Both Tutorials
@@ -240,6 +290,7 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 | Tutorial 01 (Weak Supervision) | Random Forest | 95% | 0.82 | Snorkel-labeled (4,457) |
 | **Tutorial 02 (Augmented)** | **Logistic Regression** | **98%** | **0.94** | **Augmented (13,182)** |
 | Tutorial 02 (Augmented) | Random Forest | 98% | 0.91 | Augmented (13,182) |
+| Tutorial 03 (Slicing) | Per-slice monitoring | 97% | 0.90 | Gold-labeled (4,457) |
 
 The combination of weak supervision (Tutorial 01) and data augmentation (Tutorial 02) achieves 98% accuracy and 0.94 spam F1 — without any manual labeling of training data.
 
@@ -296,6 +347,9 @@ python 01_sms_spam_labeling_tutorial.py
 # Run Tutorial 02: Data Augmentation
 python 02_sms_spam_augmentation_tutorial.py
 
+# Run Tutorial 03: Data Slicing
+python 03_sms_spam_slicing_tutorial.py
+
 # Or open notebooks
 jupyter notebook
 ```
@@ -308,6 +362,7 @@ jupyter notebook
 - matplotlib
 - nltk
 - jupyter
+- textblob
 - jupytext
 
 ---
