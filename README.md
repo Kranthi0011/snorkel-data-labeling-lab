@@ -9,6 +9,7 @@
 - [Project Architecture](#project-architecture)
 - [Tutorial 01: Labeling Functions](#tutorial-01-labeling-functions)
 - [Tutorial 02: Data Augmentation](#tutorial-02-data-augmentation)
+- [Tutorial 03: Data Slicing](#tutorial-03-data-slicing)
 - [Results Summary](#results-summary)
 - [Key Findings and Insights](#key-findings-and-insights)
 - [Setup and Installation](#setup-and-installation)
@@ -18,10 +19,11 @@
 
 ## Introduction
 
-This lab demonstrates the practical application of **Snorkel**, a weak supervision framework, for building labeled training datasets without manual annotation and augmenting them using transformation functions. The project covers two core Snorkel tutorials adapted to the SMS spam classification domain:
+This lab demonstrates the practical application of **Snorkel**, a weak supervision framework, for building labeled training datasets without manual annotation, augmenting them using transformation functions, and monitoring model performance on critical data subsets. The project covers all three core Snorkel tutorials adapted to the SMS spam classification domain:
 
-1. **Tutorial 01 — Labeling Functions**: Programmatically label unlabeled SMS data using heuristic labeling functions and train downstream classifiers.
-2. **Tutorial 02 — Data Augmentation**: Augment the labeled training set using transformation functions to improve model generalization.
+1. **Tutorial 01 - Labeling Functions**: Programmatically label unlabeled SMS data using heuristic labeling functions and train downstream classifiers.
+2. **Tutorial 02 - Data Augmentation**: Augment the labeled training set using transformation functions to improve model generalization.
+3. **Tutorial 03 - Data Slicing**: Monitor model performance on critical data subsets using slicing functions and compare models per slice.
 
 The task: **classify SMS text messages as spam or ham (not spam)** using the UCI SMS Spam Collection dataset. This lab is part of the IE-7374 MLOps course at Northeastern University and is based on the Snorkel Spam Tutorials from the [MLOps repository](https://github.com/raminmohammadi/MLOps/tree/main/Labs/Data_Labs/Data_Labeling_Labs).
 
@@ -37,9 +39,11 @@ In the realm of machine learning and artificial intelligence, data is the bedroc
 - **Creating ground truth benchmarks**: Labeled data serves as the benchmark for evaluating model performance. By comparing model predictions against accurately labeled data, ML engineers can assess the efficacy of their algorithms.
 - **Enabling domain-specific insights**: By categorizing data points into meaningful classes, organizations can derive valuable insights about customer preferences, market trends, and business operations.
 
-**The challenge**: Manual labeling is labor-intensive, time-consuming, expensive, and prone to errors, inconsistencies, and biases — especially when dealing with large volumes of unstructured data. This motivates the use of automated and programmatic labeling tools like Snorkel.
+**The challenge**: Manual labeling is labor-intensive, time-consuming, expensive, and prone to errors, inconsistencies, and biases -- especially when dealing with large volumes of unstructured data. This motivates the use of automated and programmatic labeling tools like Snorkel.
 
 **The role of data augmentation**: Even after obtaining labeled data, training sets may be too small or lack diversity. Data augmentation addresses this by creating transformed copies of existing data points, increasing dataset size and improving model robustness without additional manual labeling effort.
+
+**The importance of data slicing**: Overall model accuracy can mask poor performance on critical subsets. Data slicing enables teams to identify and monitor these failure modes, ensuring models perform well not just on average but on the data subsets that matter most.
 
 ---
 
@@ -47,11 +51,11 @@ In the realm of machine learning and artificial intelligence, data is the bedroc
 
 Snorkel is a powerful framework designed to streamline the data labeling pipeline and mitigate the challenges associated with manual annotation. It provides three core operators:
 
-1. **Labeling Functions (LFs)**: Users write programmatic rules — heuristics, keyword searches, regex patterns, and third-party model outputs — that each assign labels to subsets of the data. Each LF may be noisy or incomplete on its own.
+1. **Labeling Functions (LFs)**: Users write programmatic rules -- heuristics, keyword searches, regex patterns, and third-party model outputs -- that each assign labels to subsets of the data. Each LF may be noisy or incomplete on its own.
 2. **Transformation Functions (TFs)**: Users define class-preserving transformations (synonym replacement, word swapping, typo injection) that generate new training data points from existing ones, effectively augmenting the dataset.
-3. **Slicing Functions (SFs)**: Users identify critical data subsets or slices for targeted monitoring and performance improvement.
+3. **Slicing Functions (SFs)**: Users identify critical data subsets or slices for targeted monitoring and performance improvement, ensuring models don't fail on important edge cases.
 
-Snorkel's **Label Model** aggregates noisy LF outputs into single, probabilistic labels by learning LF accuracies and correlations — no ground truth needed for the training set. The resulting labels train downstream discriminative classifiers that generalize to unseen data.
+Snorkel's **Label Model** aggregates noisy LF outputs into single, probabilistic labels by learning LF accuracies and correlations -- no ground truth needed for the training set. The resulting labels train downstream discriminative classifiers that generalize to unseen data.
 
 ---
 
@@ -75,38 +79,42 @@ This dataset differs from the original YouTube comments dataset used in the cour
 
 ## Modifications from Original Lab
 
-This submission introduces significant modifications across both tutorials:
+This submission introduces significant modifications across all three tutorials:
 
 | # | Modification | Original Lab | This Lab |
 |---|-------------|-------------|----------|
 | 1 | **Dataset** | YouTube video comments | UCI SMS Spam Collection (text messages) |
 | 2 | **Labeling Functions** | YouTube-specific LFs (e.g., "subscribe", channel promotions) | 11 SMS-specific LFs (currency symbols, phone numbers, txt-speak, personal greetings, etc.) |
 | 3 | **Transformation Functions** | Generic text TFs | 6 SMS-specific TFs including typo injection, case changes, word duplication |
-| 4 | **Additional Models** | Logistic Regression only | Logistic Regression + Random Forest comparison across both tutorials |
-| 5 | **Visualizations** | Minimal | EDA distributions, LF coverage/accuracy charts, augmentation effects, 4-model comparison plots |
+| 4 | **Slicing Functions** | 5 YouTube-specific SFs | 9 SMS-specific SFs including sentiment analysis, caps detection, punctuation patterns |
+| 5 | **Additional Models** | Logistic Regression only | Logistic Regression + Random Forest comparison across all tutorials |
 | 6 | **End Model** | LSTM (Tutorial 02) | Logistic Regression + Random Forest with TF-IDF features |
-| 7 | **Slicing Functions** | 5 YouTube-specific SFs | 9 SMS-specific SFs including sentiment analysis, caps detection, punctuation patterns |
+| 7 | **Visualizations** | Minimal | EDA distributions, LF coverage/accuracy charts, augmentation effects, slice performance, per-slice model comparison plots |
 
 ---
 
 ## Project Architecture
 ```
 snorkel-data-labeling-lab/
-├── 01_sms_spam_labeling_tutorial.py        # Tutorial 01: Labeling Functions
-├── 01_sms_spam_labeling_tutorial.ipynb      # Tutorial 01: Notebook version
-├── 02_sms_spam_augmentation_tutorial.py     # Tutorial 02: Data Augmentation
-├── 02_sms_spam_augmentation_tutorial.ipynb  # Tutorial 02: Notebook version
-├── utils.py                                 # Data loading utility functions
-├── requirements.txt                         # Python dependencies
-├── README.md                                # This file
-├── .gitignore                               # Git ignore rules
-└── data/
-    ├── SMSSpamCollection                    # Raw dataset (TSV format)
-    ├── eda_distributions.png                # EDA visualization (Tutorial 01)
-    ├── lf_coverage_accuracy.png             # LF analysis visualization (Tutorial 01)
-    ├── model_comparison.png                 # Model comparison chart (Tutorial 01)
-    ├── augmentation_effects.png             # Augmentation effects chart (Tutorial 02)
-    └── augmentation_model_comparison.png    # Original vs augmented comparison (Tutorial 02)
+|-- 01_sms_spam_labeling_tutorial.py        # Tutorial 01: Labeling Functions
+|-- 01_sms_spam_labeling_tutorial.ipynb      # Tutorial 01: Notebook version
+|-- 02_sms_spam_augmentation_tutorial.py     # Tutorial 02: Data Augmentation
+|-- 02_sms_spam_augmentation_tutorial.ipynb  # Tutorial 02: Notebook version
+|-- 03_sms_spam_slicing_tutorial.py          # Tutorial 03: Data Slicing
+|-- 03_sms_spam_slicing_tutorial.ipynb       # Tutorial 03: Notebook version
+|-- utils.py                                 # Data loading utility functions
+|-- requirements.txt                         # Python dependencies
+|-- README.md                                # This file
+|-- .gitignore                               # Git ignore rules
+|-- data/
+    |-- SMSSpamCollection                    # Raw dataset (TSV format)
+    |-- eda_distributions.png                # EDA visualization (Tutorial 01)
+    |-- lf_coverage_accuracy.png             # LF analysis visualization (Tutorial 01)
+    |-- model_comparison.png                 # Model comparison chart (Tutorial 01)
+    |-- augmentation_effects.png             # Augmentation effects chart (Tutorial 02)
+    |-- augmentation_model_comparison.png    # Original vs augmented comparison (Tutorial 02)
+    |-- slice_performance.png                # Slice size and F1 chart (Tutorial 03)
+    |-- slice_model_comparison.png           # LR vs RF per-slice comparison (Tutorial 03)
 ```
 
 ---
@@ -119,11 +127,11 @@ This tutorial demonstrates how to programmatically label an unlabeled SMS datase
 
 ### Methodology
 
-**Step 1 — Data Loading**: The SMS Spam Collection is loaded and split 80/20 with stratified sampling. Ground truth labels are stored separately to simulate an unlabeled training scenario.
+**Step 1 - Data Loading**: The SMS Spam Collection is loaded and split 80/20 with stratified sampling. Ground truth labels are stored separately to simulate an unlabeled training scenario.
 
-**Step 2 — Exploratory Data Analysis**: We analyzed message length and word count distributions, finding that spam messages are significantly longer and more verbose than ham messages.
+**Step 2 - Exploratory Data Analysis**: We analyzed message length and word count distributions, finding that spam messages are significantly longer and more verbose than ham messages.
 
-**Step 3 — Labeling Function Design**: We designed 11 labeling functions across three categories:
+**Step 3 - Labeling Function Design**: We designed 11 labeling functions across three categories:
 
 **Keyword-Based LFs** (detect spam vocabulary):
 
@@ -151,7 +159,7 @@ This tutorial demonstrates how to programmatically label an unlabeled SMS datase
 | `lf_short_message` | Less than 5 words | Very short messages are almost always ham |
 | `lf_personal_greeting` | Starts with "hey", "hi", "hello", etc. | Personal greetings indicate legitimate conversation |
 
-**Step 4 — LF Analysis**: Using Snorkel's LFAnalysis, we evaluated each LF:
+**Step 4 - LF Analysis**: Using Snorkel's LFAnalysis, we evaluated each LF:
 
 | Labeling Function | Coverage | Emp. Accuracy | Correct | Incorrect |
 |-------------------|----------|---------------|---------|-----------|
@@ -167,9 +175,9 @@ This tutorial demonstrates how to programmatically label an unlabeled SMS datase
 | lf_contains_free | 4.6% | 75.2% | 155 | 51 |
 | lf_contains_txt_speak | 6.6% | 70.9% | 207 | 85 |
 
-**Step 5 — Label Model Training**: The Snorkel LabelModel was trained for 500 epochs. For uncovered data points (no LF voted), we defaulted to HAM using domain knowledge.
+**Step 5 - Label Model Training**: The Snorkel LabelModel was trained for 500 epochs. For uncovered data points (no LF voted), we defaulted to HAM using domain knowledge.
 
-**Step 6 — End Model Training**: Two classifiers trained on Snorkel-generated labels using TF-IDF features.
+**Step 6 - End Model Training**: Two classifiers trained on Snorkel-generated labels using TF-IDF features.
 
 ### Tutorial 01 Results
 
@@ -189,9 +197,9 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 
 ### Methodology
 
-**Step 1 — Load Labeled Data**: We use the labeled SMS dataset (with gold labels) as our starting point, simulating a scenario where labeling has already been completed.
+**Step 1 - Load Labeled Data**: We use the labeled SMS dataset (with gold labels) as our starting point, simulating a scenario where labeling has already been completed.
 
-**Step 2 — Transformation Function Design**: We designed 6 transformation functions that create new training data while preserving the original class label:
+**Step 2 - Transformation Function Design**: We designed 6 transformation functions that create new training data while preserving the original class label:
 
 | TF | Description | Category |
 |----|------------|----------|
@@ -202,9 +210,9 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 | `tf_add_typo` | Swaps two adjacent characters to simulate typos | SMS-specific (YOUR MODIFICATION) |
 | `tf_duplicate_word` | Duplicates a random word (simulating SMS typing) | SMS-specific (YOUR MODIFICATION) |
 
-**Step 3 — Preview Transformations**: We previewed TF outputs on sample messages to verify they produce valid, class-preserving transformations. Examples include replacing "week" with "hebdomad" (synonym) and swapping "academic the" (word swap).
+**Step 3 - Preview Transformations**: We previewed TF outputs on sample messages to verify they produce valid, class-preserving transformations. Examples include replacing "week" with "hebdomad" (synonym) and swapping "academic the" (word swap).
 
-**Step 4 — Apply Augmentation**: Using Snorkel's RandomPolicy with sequence_length=2 and n_per_original=2, we applied TFs to generate augmented data:
+**Step 4 - Apply Augmentation**: Using Snorkel's RandomPolicy with sequence_length=2 and n_per_original=2, we applied TFs to generate augmented data:
 
 | Metric | Value |
 |--------|-------|
@@ -214,9 +222,9 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 | Original Ham / Spam | 3,859 / 598 |
 | Augmented Ham / Spam | 11,397 / 1,785 |
 
-**Step 5 — Visualization**: We generated charts comparing dataset sizes and message length distributions before and after augmentation.
+**Step 5 - Visualization**: We generated charts comparing dataset sizes and message length distributions before and after augmentation.
 
-**Step 6 — Model Comparison**: We trained Logistic Regression and Random Forest on both original and augmented datasets to measure the impact of augmentation.
+**Step 6 - Model Comparison**: We trained Logistic Regression and Random Forest on both original and augmented datasets to measure the impact of augmentation.
 
 ### Tutorial 02 Results
 
@@ -231,18 +239,17 @@ This tutorial builds on Tutorial 01 by demonstrating how to use Snorkel's transf
 
 ---
 
-
 ## Tutorial 03: Data Slicing
 
 ### Overview
 
-This tutorial demonstrates how to use Snorkel's slicing functions to identify critical data subsets, monitor per-slice model performance, and compare models across slices. In real-world applications, overall accuracy can mask poor performance on important subsets — slicing helps surface these failure modes.
+This tutorial demonstrates how to use slicing functions to identify critical data subsets, monitor per-slice model performance, and compare models across slices. In real-world applications, overall accuracy can mask poor performance on important subsets -- slicing helps surface these failure modes.
 
 ### Methodology
 
-**Step 1-2 — Baseline Models**: We trained Logistic Regression and Random Forest on the full labeled SMS dataset using TF-IDF features.
+**Step 1-2 - Baseline Models**: We trained Logistic Regression and Random Forest on the full labeled SMS dataset using TF-IDF features. Baseline LR achieved 97% accuracy with 0.90 spam F1.
 
-**Step 3 — Slicing Function Design**: We defined 9 slicing functions to identify critical data subsets:
+**Step 3 - Slicing Function Design**: We defined 9 slicing functions to identify critical data subsets:
 
 | SF | Description | Category |
 |----|------------|----------|
@@ -256,33 +263,65 @@ This tutorial demonstrates how to use Snorkel's slicing functions to identify cr
 | `all_caps` | Over 50% uppercase characters | Style-based (YOUR MODIFICATION) |
 | `heavy_punctuation` | 4+ punctuation marks (!, ?, .) | Style-based (YOUR MODIFICATION) |
 
-**Step 4-5 — Slice Application and Monitoring**: We applied all SFs to the test set and measured per-slice accuracy, weighted F1, and spam-specific F1.
+**Step 4 - Slice Application**: We applied all 9 SFs to the test set and measured slice membership:
 
-**Step 6-7 — Worst Slice Analysis**: We identified the weakest slices and examined misclassified examples to understand failure modes.
+| Slice | Test Points | Percentage |
+|-------|------------|-----------|
+| positive_sentiment | 274 | 24.6% |
+| heavy_punctuation | 249 | 22.3% |
+| negative_sentiment | 128 | 11.5% |
+| contains_phone_number | 114 | 10.2% |
+| long_message | 90 | 8.1% |
+| contains_currency | 74 | 6.6% |
+| short_message | 71 | 6.4% |
+| all_caps | 27 | 2.4% |
+| contains_url | 19 | 1.7% |
 
-**Step 8-9 — Model Comparison Per Slice**: We compared LR vs RF performance across all slices to determine which model handles specific subsets better.
+**Step 5 - Per-Slice Performance Monitoring**: We measured accuracy, weighted F1, and spam-specific F1 for each slice:
+
+| Slice | Size | Accuracy | Weighted F1 | Spam F1 |
+|-------|------|----------|-------------|---------|
+| contains_url | 19 | 1.000 | 1.000 | 1.000 |
+| heavy_punctuation | 249 | 0.976 | 0.975 | 0.927 |
+| short_message | 71 | 0.972 | 0.958 | 0.000 |
+| negative_sentiment | 128 | 0.969 | 0.966 | 0.833 |
+| positive_sentiment | 274 | 0.964 | 0.962 | 0.878 |
+| all_caps | 27 | 0.963 | 0.957 | 0.667 |
+| long_message | 90 | 0.956 | 0.949 | 0.667 |
+| contains_currency | 74 | 0.905 | 0.909 | 0.931 |
+| contains_phone_number | 114 | 0.877 | 0.927 | 0.934 |
+| **OVERALL** | **1115** | **0.975** | **0.974** | **0.896** |
+
+**Step 6-7 - Worst Slice Analysis**: The `contains_currency` slice had the worst weighted F1 (0.909) with 7 misclassified examples. Analysis revealed these were spam messages using informal language ("Hey there darling", "sexy sexy cum") that don't contain typical spam keywords, making them harder for TF-IDF-based models to catch.
+
+**Step 8-9 - LR vs RF Per-Slice Comparison**: We compared both models across all slices:
 
 ### Tutorial 03 Results
 
-| Slice | Size | LR F1 | RF F1 | Better Model |
-|-------|------|-------|-------|-------------|
-| short_message | 71 | 0.958 | 0.958 | Tie |
-| long_message | 90 | 0.949 | 0.963 | RF |
-| contains_url | 19 | 1.000 | 1.000 | Tie |
-| contains_phone_number | 114 | 0.927 | 0.927 | Tie |
-| contains_currency | 74 | 0.909 | 0.909 | Tie |
-| positive_sentiment | 274 | 0.962 | 0.962 | Tie |
-| negative_sentiment | 128 | 0.966 | 0.984 | RF |
-| all_caps | 27 | 0.957 | 0.890 | LR |
-| heavy_punctuation | 249 | 0.975 | 0.962 | LR |
-| **OVERALL** | **1115** | **0.974** | **0.973** | **LR** |
+| Slice | LR F1 | RF F1 | Better Model |
+|-------|-------|-------|-------------|
+| short_message | 0.958 | 0.958 | Tie |
+| long_message | 0.949 | 0.963 | **RF** |
+| contains_url | 1.000 | 1.000 | Tie |
+| contains_phone_number | 0.927 | 0.927 | Tie |
+| contains_currency | 0.909 | 0.909 | Tie |
+| positive_sentiment | 0.962 | 0.962 | Tie |
+| negative_sentiment | 0.966 | 0.984 | **RF** |
+| all_caps | 0.957 | 0.890 | **LR** |
+| heavy_punctuation | 0.975 | 0.962 | **LR** |
+| **OVERALL** | **0.974** | **0.973** | **LR** |
 
-**Key finding**: The `contains_currency` slice had the worst performance (F1=0.909), with 7 misclassified spam messages that used informal language patterns not captured by TF-IDF features. Random Forest outperformed LR on long messages and negative sentiment slices, while LR was better on all-caps and heavy punctuation slices.
+**Key findings from slicing**:
+- The `contains_currency` slice had the lowest accuracy (90.5%), revealing a weakness in spam detection for financial lure messages.
+- Random Forest outperformed LR on long messages (+1.4%) and negative sentiment (+1.8%), suggesting tree-based models handle complex, longer text patterns better.
+- LR outperformed RF on all-caps messages (+6.7%) and heavy punctuation (+1.3%), indicating linear models are more robust to stylistic text variations.
+- The `short_message` slice had 0.000 spam F1 because short messages in the test set were almost exclusively ham -- the model correctly classified them but had no spam examples to evaluate against.
 
 ---
+
 ## Results Summary
 
-### Overall Best Results Across Both Tutorials
+### Overall Best Results Across All Three Tutorials
 
 | Approach | Model | Accuracy | Spam F1 | Training Data |
 |----------|-------|----------|---------|---------------|
@@ -292,25 +331,27 @@ This tutorial demonstrates how to use Snorkel's slicing functions to identify cr
 | Tutorial 02 (Augmented) | Random Forest | 98% | 0.91 | Augmented (13,182) |
 | Tutorial 03 (Slicing) | Per-slice monitoring | 97% | 0.90 | Gold-labeled (4,457) |
 
-The combination of weak supervision (Tutorial 01) and data augmentation (Tutorial 02) achieves 98% accuracy and 0.94 spam F1 — without any manual labeling of training data.
+The combination of weak supervision (Tutorial 01), data augmentation (Tutorial 02), and slice-based monitoring (Tutorial 03) provides a complete pipeline for building, improving, and monitoring spam detection models -- all without manual labeling of training data.
 
 ---
 
 ## Key Findings and Insights
 
-1. **Weak supervision works**: Despite using no hand-labeled training data, our Tutorial 01 model achieved 97% accuracy and 0.89 F1 on spam — competitive with fully supervised approaches.
+1. **Weak supervision works**: Despite using no hand-labeled training data, our Tutorial 01 model achieved 97% accuracy and 0.89 F1 on spam -- competitive with fully supervised approaches.
 
 2. **Data augmentation improves recall**: Augmentation primarily boosted spam recall (0.81 to 0.88) while maintaining perfect precision. The augmented dataset (13,182 samples) helped models learn more diverse spam patterns.
 
-3. **LF quality matters more than quantity**: We initially tested 13 LFs but removed two low-accuracy ones (lf_all_caps_ratio at 6% and lf_exclamation_heavy at 8%). A smaller set of high-quality LFs outperformed the larger noisy set.
+3. **Slicing reveals hidden weaknesses**: While overall accuracy was 97%, the `contains_currency` slice dropped to 90.5% and `contains_phone_number` to 87.7%. Without slicing, these failure modes would go undetected.
 
-4. **Handling ABSTAIN is critical**: The strategy for labeling uncovered data points significantly impacts performance. Defaulting abstains to HAM using domain knowledge produced the best results.
+4. **Different models excel on different slices**: Random Forest handles long messages and negative sentiment better, while Logistic Regression is more robust on stylistic variations (all caps, heavy punctuation). This insight enables potential ensemble strategies.
 
-5. **Linear models outperform ensembles on this task**: Logistic Regression consistently outperformed Random Forest across both tutorials, likely due to better robustness to label noise and the linear separability of TF-IDF spam features.
+5. **LF quality matters more than quantity**: We initially tested 13 LFs but removed two low-accuracy ones (lf_all_caps_ratio at 6% and lf_exclamation_heavy at 8%). A smaller set of high-quality LFs outperformed the larger noisy set.
 
-6. **SMS spam has distinctive patterns**: Phone numbers (5+ digit sequences) and currency symbols were the strongest individual spam indicators with near-perfect accuracy. SMS-specific TFs (typo injection, case changes) helped models learn real-world SMS text variations.
+6. **Handling ABSTAIN is critical**: The strategy for labeling uncovered data points significantly impacts performance. Defaulting abstains to HAM using domain knowledge produced the best results.
 
-7. **Augmentation preserves class balance**: The 3x dataset growth maintained the original class ratio (87% ham / 13% spam), preventing the introduction of class imbalance artifacts.
+7. **SMS spam has distinctive patterns**: Phone numbers (5+ digit sequences) and currency symbols were the strongest individual spam indicators with near-perfect accuracy. SMS-specific TFs (typo injection, case changes) helped models learn real-world SMS text variations.
+
+8. **Augmentation preserves class balance**: The 3x dataset growth maintained the original class ratio (87% ham / 13% spam), preventing the introduction of class imbalance artifacts.
 
 ---
 
@@ -332,8 +373,9 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-pip install nltk
+pip install nltk textblob
 python3 -c "import nltk; nltk.download('wordnet'); nltk.download('omw-1.4'); nltk.download('averaged_perceptron_tagger'); nltk.download('averaged_perceptron_tagger_eng')"
+python3 -m textblob.download_corpora
 
 # Download the dataset
 cd data
@@ -361,8 +403,8 @@ jupyter notebook
 - scikit-learn
 - matplotlib
 - nltk
-- jupyter
 - textblob
+- jupyter
 - jupytext
 
 ---
@@ -372,6 +414,6 @@ jupyter notebook
 1. Ratner, A., Bach, S., Ehrenberg, H., Fries, J., Wu, S., and Re, C. (2017). Snorkel: Rapid Training Data Creation with Weak Supervision. Proceedings of the VLDB Endowment, 11(3), 269-282.
 2. Almeida, T.A., Gomez Hidalgo, J.M., Yamakami, A. (2011). Contributions to the Study of SMS Spam Filtering: New Collection and Results. Proceedings of the 2011 ACM Symposium on Document Engineering.
 3. Ratner, A., Ehrenberg, H., Hussain, Z., Dunnmon, J., and Re, C. (2017). Learning to Compose Domain-Specific Transformations for Data Augmentation. NeurIPS 2017.
-4. Snorkel Tutorials — Spam Classification: https://github.com/snorkel-team/snorkel-tutorials
-5. MLOps Course Repository — Northeastern University: https://github.com/raminmohammadi/MLOps
+4. Snorkel Tutorials - Spam Classification: https://github.com/snorkel-team/snorkel-tutorials
+5. MLOps Course Repository - Northeastern University: https://github.com/raminmohammadi/MLOps
 6. UCI SMS Spam Collection Dataset: https://archive.ics.uci.edu/ml/datasets/sms+spam+collection
